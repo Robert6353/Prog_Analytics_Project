@@ -1,50 +1,62 @@
 import numpy as np
 import matplotlib.pyplot as plt
-plt.style.use('fivethirtyeight')
-#could also use style.use("ggplot")
+plt.style.use('ggplot')
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
-#matplotlib.rcParams['axes.labelsize'] = 14
-#matplotlib.rcParams['xtick.labelsize'] = 12
-#matplotlib.rcParams['ytick.labelsize'] = 12
-#matplotlib.rcParams['text.color'] = 'k'
+#In this module we are given the option attempt to visualise arrays or 
+#columns from our data frame, 
 
+#csv = dataframe, array = string, ind = string
 def raw_time_series(csv, array, ind):
-    Dat = pd.to_datetime(csv["Date"])
-    date_index = csv.set_index(Dat)
     #ind = input("Do you want a trend line")
-    if ind == "1":
-        Line_plot_trend(csv, array)
-    elif ind == "2":
-        Line_scatter_trend(csv, array)
-    elif ind == "3":
-        line_plot(csv, array, date_index)      
-    elif ind == "4":
-        scatter_plot(csv, array, Dat)
-    else:
-        print("Please re-do this")
+    try:
+        if ind == "1":
+            Line_plot_trend(csv, array)
+        elif ind == "2":
+            Line_scatter_trend(csv, array)
+        elif ind == "3":
+            line_plot(csv, array)      
+        elif ind == "4":
+            scatter_plot(csv, array)
+        elif ind == "5":
+            sma(csv, array)
+        elif ind == "6":
+            wma(csv, array)
+        elif ind == "7":
+            ema(csv, array)
+        elif ind== "8":
+            MACD(csv, array)     
+    except Exception:
+        print("You input the wrong thing")
 
-def Line_plot_trend(csv, array):  
+#Get linear plt with trend line
+def Line_plot_trend(csv, array):
+    #very difficult to plot date with Lin Regression modules
     Date = np.arange(csv["Date"].count())
     DateLR = Date.reshape(-1, 1)
     ArrayLR = csv[array].values.reshape(-1, 1)
     print(csv["Date"].count())
 
+#Uses regression to find the best least squares trend line there is available
     reg = LinearRegression()
     reg.fit(DateLR, ArrayLR)
     print(f"The slope is {reg.coef_[0][0]} and the intercept is {reg.intercept_[0]}")
     
     predictions = reg.predict(DateLR.reshape(-1, 1))
     
-    plt.figure(figsize=(20, 8))
+    plt.figure(figsize=(12, 8))
     plt.plot(DateLR, ArrayLR, c = "b")
     plt.plot(DateLR, predictions, linewidth=2, c = "r")
     plt.title("trend line");
     plt.ylabel(array);
     plt.xlabel('Number of Days');
     plt.show()
-    
+
+#csv = pd.read_csv("berkshire.csv")
+#Line_plot_trend(csv, "Open")
+  
+#Also uses linear regression to get the trend line, scatter plot  
 def Line_scatter_trend(csv, array):  
     Date = np.arange(csv["Date"].count())
     DateLR = Date.reshape(-1, 1)
@@ -58,7 +70,7 @@ def Line_scatter_trend(csv, array):
     predictions = reg.predict(DateLR.reshape(-1, 1))
     #print(predictions)
     
-    plt.figure(figsize=(20, 8))
+    plt.figure(figsize=(12, 8))
     plt.scatter(DateLR, ArrayLR, c = "b")
     plt.plot(DateLR, predictions, linewidth=2, c = "r")
     plt.title("trend line");
@@ -66,7 +78,9 @@ def Line_scatter_trend(csv, array):
     plt.xlabel('Number of Days');
     plt.show()
 
-def line_plot(csv, array, date_index):
+def line_plot(csv, array):
+    Dat = pd.to_datetime(csv["Date"])
+    date_index = csv.set_index(Dat)
     #Linear plot time series
     date_index[array].plot(figsize = (12, 8), c = "b")
     plt.title("Robs new plot")
@@ -74,77 +88,100 @@ def line_plot(csv, array, date_index):
     plt.ylabel(array, size = 20)
     plt.show() 
   
-def scatter_plot(csv, array, Dat):
+def scatter_plot(csv, array):
+    Dat = pd.to_datetime(csv["Date"])
     #Scatter plot time series
     plt.figure(figsize = (12, 8))
     plt.scatter(Dat, csv[array], linewidth = 2, c = "b")
     plt.title("trend line");
     plt.ylabel(array);
-    plt.xlabel('Number of Days');
+    plt.xlabel('Date');
     plt.show()
 
-def moving_average_input(csv, array):
-    n = int(input("What will n be? "))
-    simple_moving_average(csv, array, n)
-
-def single_moving_average(csv):
-    csv["SMA_10"].plot(color='green', linewidth=3, figsize=(12,6))
-
-def simple_moving_average(csv, array, n):
+def sma(csv, array):
+    #Allow user to choose n
+    n = int(input("What will n of the simple moving average be? "))
+    #Sets date column as the index
+    csv.index = csv["Date"]
+    csv.index = pd.to_datetime(csv.index)
+    #Create new column calle SMA1, its a rolling average of whatever n user specifies
     csv['SMA1'] = csv[array].rolling(n, min_periods=1).mean()
-    #csv['SMA2'] = csv[array].rolling(n, min_periods=1).mean()
-    Date = np.arange(csv["Date"].count())
-    plt.figure(figsize=(20, 8))
-    plt.plot(Date, csv[array])
-    plt.plot(Date, csv["SMA1"], linewidth=2, c = "b")
-    #plt.plot(Date, csv["SMA2"], linewidth=2, c = "r")
-    plt.title("trend line");
-    plt.ylabel("y");
-    plt.xlabel('Number of Days');
-    plt.show()
-   
-#csv = pd.read_csv("berkshire.csv")
-#raw_time_series(csv, "Open", "1") 
-   
-#Linear_regression(csv, "Open")
+    sma_plot(csv, array, n)
 
-def weighted_moving_average():
-    data = pd.read_csv("berkshire.csv", index_col = 'Date')
-    data.index = pd.to_datetime(data.index)
-    weights = np.arange(1,31)#need to alter so user can specify N
-    data["wma10"] = data['Open'].rolling(30).apply(
+
+def sma_plot(csv, array, n):
+    plt.figure(figsize=(12, 8))
+    plt.plot(csv.index, csv[array])
+    plt.plot(csv.index, csv["SMA1"], linewidth=2, c = "b")
+    plt.title("Simple moving average");
+    plt.ylabel(array);
+    plt.xlabel('Date');
+    plt.show()
+
+def wma(csv, array):
+    n = int(input("What will n of the simple moving average be? "))
+    csv.index = csv["Date"]
+    csv.index = pd.to_datetime(csv.index)
+    #n+1 so user can specify what n they need
+    #Applies weights to all the items
+    weights = np.arange(1, n+1)
+    #Uses lambda to identify individual items within dataframe in order
+    #to perform calculations on them, allows us to create a wma and apply
+    #wieghts to different items in our chosen array
+    csv["wma"] = csv[array].rolling(n).apply(
     lambda prices: np.dot(prices, weights)/weights.sum(), raw=True)
-    print(data["wma10"].head(20), data["Open"].head(20))
-    data["sma10"] = data['Open'].rolling(30).mean()
-    plt.figure(figsize = (12,6))
-    plt.plot(data['Open'], label="Open")
-    plt.plot(data["sma10"], label = "30 day SMA")
-    plt.plot(data["wma10"], label="30-Day WMA")
+    print(csv["wma"].head(15), csv[array].head(15))
+    csv["sma"] = csv[array].rolling(n).mean()
+    wma_plot(csv, array, csv["sma"], csv["wma"], n)
+
+def wma_plot(csv, array, sma, wma, n):
+    plt.figure(figsize = (12,8))
+    plt.plot(csv[array], label=f"{array}", color = "red")
+    plt.plot(sma, label = f"{n} Day SMA", color = "blue")
+    plt.plot(wma, label= f"{n} Day WMA", color = "green")
     #plt.plot(sma10, label="10-Day SMA")
+    plt.title("Weighted moving average")
     plt.xlabel("Date")
-    plt.ylabel("Open")
+    plt.ylabel(array)
     plt.legend()
     plt.show()
 
-#weighted_moving_average()
-def MACD():
-    plt.style.use('fivethirtyeight')
-    data = pd.read_csv("amazon.csv")
-    #Calculate the MACD and Signal Line indicators
-    #Calculate the Short Term Exponential Moving Average
-    ShortEMA = data.Close.ewm(span=12, adjust=False).mean() #AKA Fast moving average
-    #Calculate the Long Term Exponential Moving Average
-    LongEMA = data.Close.ewm(span=26, adjust=False).mean() #AKA Slow moving average
-    #Calculate the Moving Average Convergence/Divergence (MACD)
-    MACD = ShortEMA - LongEMA
-    #Calcualte the signal line
-    signal = MACD.ewm(span=9, adjust=False).mean()
-    #Plot the chart
-    plt.figure(figsize=(12.2,4.5)) #width = 12.2in, height = 4.5
-    plt.plot(data.index, MACD, label='MACD', color = 'red')
-    plt.plot(data.index, signal, label='Signal Line', color='blue')
-    plt.xticks(rotation=45)
-    plt.legend(loc='upper left')
-    plt.show()
+#Exponential moving average
+def ema(csv, array):
+    n = int(input("What is n going to be? "))
+    ema10 = csv[array].ewm(span=n).mean()
+    #Creates anew column int our data frame from which we calculuate the 
+    #Exponential moving average
+    csv['EMA'] = np.round(ema10, decimals=3)
+    print(csv[[array, 'EMA']].head(15), csv[[array, 'EMA']].tail(15))
+    ema_plot(csv, ema10, array)
 
-MACD()
+def ema_plot(csv, ema10, array):
+    plt.figure(figsize = (12,8))
+    plt.plot(csv[array], label=array, color = "red")
+    plt.plot(ema10, label="EMA", color = "blue")
+    plt.title("Exponential moving average")
+    plt.xlabel("Date")
+    plt.ylabel(array)
+    plt.show()
+    
+def MACD(csv, array):
+    #Get Exponential Moving Average for n = 10
+    ShortEMA = csv[array].ewm(span=10).mean()#AKA Fast moving average
+    #Get other Exponential Moving Average
+    LongEMA = csv[array].ewm(span=26, adjust=False).mean() #AKA Slow moving average
+    #Calculate MACD
+    MACD = ShortEMA - LongEMA
+    #Calcualte line
+    signal = MACD.ewm(span=9, adjust=False).mean()
+    MACD_plot(csv, array, MACD, signal)
+
+def MACD_plot(csv, array, MACD, signal):
+    plt.figure(figsize=(12,8))
+    plt.plot(csv.index, MACD, label='MACD', color = 'red')
+    plt.plot(csv.index, signal, label='Signal Line', color='blue')
+    plt.title("Moving Average Convergence Divergence")
+    plt.xlabel("Date")
+    plt.ylabel(array)
+    plt.xticks(rotation=45)
+    plt.show()

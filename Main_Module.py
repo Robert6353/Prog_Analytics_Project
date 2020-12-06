@@ -1,141 +1,186 @@
 import sys
 import pandas as pd
-from Descriptive_Metrics import stat_analysis
-from Data_Gathering import ticker
+from Desc_Analytics import stat_analysis
 from DataViz import raw_time_series
-#from Graphics import graphics
-#from GUI import tkint
-#from New_Descriptive_metrics import metric_choice
+from Predictive_analytics import predictive_analytics_menu
+from Data_Gather import validate_csv, company_list, validate_date
 
-#def t_and_c():
-#    agreement = input('''Press Y if you agree to Robs Terms and conditions
-#Press N if do not Agree to Robs Terms and Conditions(will result in exiting application"")
-#Press V if you wish to view Robs Terms and Conditions
-#> ''')
-#    while agreement == "Y" or agreement == "N" or agreement == "V":
-#        if agreement == "Y":
-#            menu(user_input())
-#        elif agreement == "N":
-#
-#            sys.exit()
-#        elif agreement == "V":
-#            print("\n")
-#            for line in open("terms.txt"):
-#                print(line, end = "")
-#                print("\n")
-#                t_and_c()
-#    else:
-#       print("\nPlease choose a valid option")
-#       t_and_c()
-
+#Inital function, shows the menu and gives the user a choise of their first
+#Course of action
 def user_input():
     print("Welcome to Robs fresh new stock analyser")
-    print("1. Gather data\n2. Descriptive analysis\n3. DataViz\n4. Help")
+    print("1. Gather data\n2. Descriptive analysis\n3. DataViz\n4. \
+Predictive Analytics \n5. Help, \n6. Terms and conditions")
     print("Press any other key to exit")
     choice = input("> ")
     menu(choice)
 
+#Use array menu to choose the proper array for each class
+#Option 1 allows you to download a csv with finacial data on a compnay of your
+#choosing between selected dates
+#Option 2, 3, and 4 all give you the option to select your own csv, 
+#filter data and choose what array you want to use
 def menu(choice):
-    while choice in ["1", "2", "3", "4", "5"]:
+    while choice in ["1", "2", "3", "4", "5", "6"]:
         if choice == "1":
-            Gather_data()
+            company_list()
+            user_input()
         elif choice == "2":
-            CSV()
+            stat_analysis(CSV(), array_menu())
+            user_input()
         elif choice == "3":
-            data_viz_menu()
+            data_viz_menu(CSV(), array_menu())
         elif choice == "4":
-            predictive_analytics()
+            pred_analytics_menu(CSV(), array_menu())
         elif choice == "5":
             Help()
+        elif choice == "6":
+            t_and_c()
     else:
         sys.exit()
     choice = user_input()
 
-def Gather_data():
-    print('''1. Online stock analysis in csv form
-2. Online sotck analysis in command line
-3. Offline sotck analysis''')
-    online_input = input("> ")
-    while online_input == "1":
-        if online_input == "1":
-            download_data_csv()
-       # elif online_input == "2":
-            #download_data_Yahoo()
-    else:
-        print("Must choose a valid input\n please press 1 or 2")
-
-def download_data_Yahoo():
-    print("nothing for now")
-
-#Need to encode Try and except into here
-def download_data_csv():
-    data = input("what is the ticker symbol you want")
-    start = input("when to start?")
-    end = input("When to end?")
-    csv = input("what will you name the csv?")
-    #option = input("Do you want to open the csv?")
-    ticker(data, start, end, csv)
-    menu(user_input())
-
+#Identify the correct CSV and ensure proper user input, validate input
 def CSV():
     sample_csv = input("what is the name of csv? ")
-    csv = pd.read_csv(sample_csv)
+    try:
+        #See Data_Gatheirng for details on validate_csv
+        validate_csv(sample_csv)
+    except:
+        print("unable to validate csv input")
+        user_input()
+    try:
+        csv = pd.read_csv(sample_csv)
+    except Exception:
+        print("Unable to open CSV, could not find a csv with that name")
+        user_input()
+    #User is shown CSV where they are given option to try again
     print(csv.head(), csv.tail())
     print("Is this the file you were looking for? ")
     print("Press N if it is not, Press any other key to continue")
     confirmation = input("> ")
-    if confirmation != "N":
-        descriptive_analysis(csv)
+    if confirmation == "N":
+        user_input()
+    #User is given the option to filter the data in the csv
+    print("Press Y if you want to filter the data, press any other key if you dont ")
+    filtering = input("> ")
+    if filtering == "Y":
+        csv = data_filter(csv)
+        return csv
     else:
-        CSV()
+        return csv
+ 
+#Filter the available data and ensure proper user input
+def data_filter(csv):
+    Date = pd.to_datetime(csv["Date"])
+    start_date = input("What will the start date be? please input in the from YYYY-MM-DD")
+    try:
+        validate_date(start_date)
+    except:
+        print("Please input a valid date")
+        user_input()
+    #Need to ensure month is less than 13 and days are less than 31
+    if int(start_date[5:7]) > 13 or int(start_date[8:]) > 31:
+        print("Please input a valid start date, Please input in the form YYYY-MM-DD")
+        user_input()
+    #See Data_Gathering for details on validate_date
+    end_date = input("What will the end date be? ")
+    try:
+        validate_date(end_date)
+    except:
+        print("Pleas input a valid date")
+        user_input()
+    if int(end_date[5:7]) > 13 or int(end_date[8:]) > 31:
+        print("Please input a valid end date, Please input in the form YYYY-MM-DD")
+        user_input()
+    after_start_date = Date >= start_date
+    before_end_date = Date <= end_date
+    between = after_start_date & before_end_date
+    filtered_csv = csv.loc[between]
+    print(filtered_csv.head(), filtered_csv.tail())
+    #print(csv.head(), csv.tail())
+    return filtered_csv
 
-def descriptive_analysis(csv):
-    desc_visual = input("What do you want to see? ")
-    while desc_visual in ["1", "2"]:
-        if desc_visual == "1":
-            csv.memory_usage()
-            stat_analysis(csv)
-            menu(user_input())
-#        if desc_visual == "2":
-#            tkint(csv)
+#Need to overhaul array menu
+def array_menu():
+    print("1. Open\n2. High\n3. Low\n4. Close\n5. Adj Close\n6. Volume, or press any other key to exit to main menu")
+    array_input = input("What array do you want? ")
+    while array_input in ["1", "2", "3", "4", "5", "6"]:
+        if array_input == "1":
+            array = "Open"
+        elif array_input == "2":
+            array = "High"
+        elif array_input == "3":
+            array = "Low"
+        elif array_input == "4":
+            array = "Close"
+        elif array_input == "5":
+            array = "Adj Close"
+        elif array_input == "6":
+            array = "Volume"
+        return array
     else:
-        descriptive_analysis(csv)
+        user_input()
 
-def data_viz_menu():
-    csv = pd.read_csv("berkshire.csv")
-    array = input("What array do you want? ")
-    print('''
+#Links to Data_Viz module, gives range of options for what graphs to use
+def data_viz_menu(csv, array):
+    print('''What type of plot do you want? 
 1. Line plot with trend line
 2. Scatter plot with trend line
 3. Line plot without trned line
-4. Scatter plot with trend line ''')
+4. Scatter plot with trend line
+5. Simple Moving Average
+6. Weighted Moving Average
+7. Exponential Moving Average
+8. Moving Average Convergence Divergence ''')
     ind = input("> ")
     raw_time_series(csv, array, ind)
     user_input()
-    
-def predictive_analytics():
-    print("This is where Im going to do models and that")
-    
+  
+#Links to Predictive_analytics module, gives rane of options for preditive analytics
+def pred_analytics_menu(csv, array):
+    print("1. Linear Regression")
+    print("2. K-Nearest Neighbours")
+    print("3. Bonus - Arima Model")
+    print("note cant use Volume with arima model")
+    type_model = input("> ")
+    predictive_analytics_menu(csv, array, type_model)
+    user_input()
+   
 def Help():
     print("Welcome to Robs stock analyser 2.0")
-    menu(user_input())
+    
+#Reads the terms and conditions from beginning to end
+def t_and_c():
+    agreement = input('''Press Y if you agree to Robs Terms and conditions
+Press N if do not Agree to Robs Terms and Conditions(will result in exiting application"")
+Press V if you wish to view Robs Terms and Conditions
+> ''')
+    while agreement == "Y" or agreement == "N" or agreement == "V":
+        if agreement == "Y":
+            menu(user_input())
+        elif agreement == "N":
 
-def show_descriptives():
-    symbol = input("Please input the ticker symbol: ")
-    values = [10, 11, 12] #values should be imported from pandas
-    print(symbol, values)
-    print(values)
-    print(sum/values, len/values, max(values))#change to numpy
+            sys.exit()
+        elif agreement == "V":
+            print("\n")
+            for line in open("terms.txt"):
+                print(line, end = "")
+                print("\n")
+                t_and_c()
+    else:
+       print("\nPlease choose a valid option")
+       t_and_c()
 
 def main():
-    #terms and conidtions
-#    t_and_c()
-    #diplay menu
-    menu(user_input())
-    #ask user for choice
-    #process choice
-
-#print(ystockquote.get_price_book("GOOGL"))
+    user_input()
+    menu()
+    #choice 1 = Data_gathering2.user_input()
+    #choice 2 = Desc_analytics.stat_analysis()
+    #choice 3 = DataViz.raw_time_series()
+    #choice 4 = Predictive_analytics()
+    #choice 5 = Help()
+    #chocie 6 = t_and_c()
 
 if __name__ == "__main__":
     main()
